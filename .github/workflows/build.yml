@@ -15,7 +15,8 @@ jobs:
 
       - name: Install WDK
         run: |
-          choco install windows-driver-kit -y
+          curl -L -o wdksetup.exe "https://go.microsoft.com/fwlink/?linkid=2249371"
+          wdksetup.exe /quiet /norestart
         shell: cmd
 
       - name: Restore All Dependencies
