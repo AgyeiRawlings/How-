@@ -15,15 +15,16 @@ jobs:
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v1
 
-      - name: Restore NuGet Packages
+      - name: Restore All Dependencies
+        # This "downloads all" for you
         run: nuget restore KsDumper11.sln
 
-      - name: Build EXE
+      - name: Build All Projects
         run: msbuild KsDumper11.sln /p:Configuration=Release /p:Platform="Any CPU"
 
-      - name: Upload Artifact
+      - name: Upload Everything
         uses: actions/upload-artifact@v4
         with:
-          name: KsDumper-Executable
-          # This path targets the specific output folder for KsDumper11
+          name: KsDumper-Full-Build
+          # This grabs everything in the Release folder so it works 100%
           path: KsDumper11/bin/Release/
