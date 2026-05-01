@@ -1,0 +1,28 @@
+name: Build KsDumper EXE
+on: [push]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v1
+
+      - name: Restore NuGet Packages
+        run: nuget restore KsDumper11.sln
+
+      - name: Build EXE
+        run: msbuild KsDumper11.sln /p:Configuration=Release /p:Platform="Any CPU"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KsDumper-Executable
+          path: KsDumper11/bin/Release/KsDumper11.exe
