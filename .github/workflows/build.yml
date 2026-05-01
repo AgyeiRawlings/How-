@@ -16,13 +16,15 @@ jobs:
       - name: Install WDK
         run: |
           curl -L -o wdksetup.exe "https://go.microsoft.com/fwlink/?linkid=2249371"
-          wdksetup.exe /quiet /norestart
+          start /wait wdksetup.exe /quiet /norestart
+          echo WDK install done
+          dir "C:\Program Files (x86)\Windows Kits\10\Include\" /b
         shell: cmd
 
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
 
-      - name: Build C# Projects Only
+      - name: Build C# Projects
         run: |
           msbuild KsDumper11\KsDumper11.csproj /p:Configuration=Release /p:Platform="x86"
           msbuild DarkControls\DarkControls.csproj /p:Configuration=Release /p:Platform="AnyCPU"
@@ -31,7 +33,9 @@ jobs:
 
       - name: Build Driver x64
         run: |
-          msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64
+          for /f "delims=" %%i in ('dir "C:\Program Files (x86)\Windows Kits\10\Include\" /b /ad /o-n') do set KITVER=%%i & goto :found
+          :found
+          msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64 /p:WindowsTargetPlatformVersion=%KITVER%
         shell: cmd
 
       - name: Upload Everything
