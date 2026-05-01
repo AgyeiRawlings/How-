@@ -22,13 +22,22 @@ jobs:
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
 
-      - name: Build All Projects
+      - name: Build C# Projects Only
         run: |
-          msbuild KsDumper11.sln /p:Configuration=Release /p:Platform="Any CPU" /p:IncludePath="C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\km;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um"
+          msbuild KsDumper11\KsDumper11.csproj /p:Configuration=Release /p:Platform="x86"
+          msbuild DarkControls\DarkControls.csproj /p:Configuration=Release /p:Platform="AnyCPU"
+          msbuild DriverInterface\DriverInterface.csproj /p:Configuration=Release /p:Platform="AnyCPU"
+        shell: cmd
+
+      - name: Build Driver x64
+        run: |
+          msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64
         shell: cmd
 
       - name: Upload Everything
         uses: actions/upload-artifact@v4
         with:
           name: KsDumper-Full-Build
-          path: KsDumper11/bin/Release/
+          path: |
+            KsDumper11/bin/x86/Release/
+            KsDumperDriver/x64/Release/
