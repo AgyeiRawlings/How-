@@ -1,10 +1,8 @@
 name: Build KsDumper EXE
 on: [push]
-
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -15,8 +13,12 @@ jobs:
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v1
 
+      - name: Install WDK
+        run: |
+          choco install windows-driver-kit -y
+        shell: cmd
+
       - name: Restore All Dependencies
-        # This "downloads all" for you
         run: nuget restore KsDumper11.sln
 
       - name: Build All Projects
@@ -26,5 +28,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: KsDumper-Full-Build
-          # This grabs everything in the Release folder so it works 100%
           path: KsDumper11/bin/Release/
