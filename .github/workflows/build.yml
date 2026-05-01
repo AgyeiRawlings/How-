@@ -17,7 +17,6 @@ jobs:
         run: |
           curl -L -o wdksetup.exe "https://go.microsoft.com/fwlink/?linkid=2249371"
           start /wait wdksetup.exe /quiet /norestart
-          dir "C:\Program Files (x86)\Windows Kits\10\Include\" /b /s | findstr ntddk.h
         shell: cmd
 
       - name: Restore All Dependencies
@@ -25,9 +24,7 @@ jobs:
 
       - name: Build C# Projects
         run: |
-          msbuild DarkControls\DarkControls.csproj /p:Configuration=Release /p:Platform="AnyCPU"
-          msbuild DriverInterface\DriverInterface.csproj /p:Configuration=Release /p:Platform="AnyCPU"
-          msbuild KsDumper11\KsDumper11.csproj /p:Configuration=Release /p:Platform="x86"
+          msbuild KsDumper11.sln /p:Configuration=Release /p:Platform="Mixed Platforms" /t:DarkControls;DriverInterface;KsDumper11
         shell: cmd
 
       - name: Build Driver x64
