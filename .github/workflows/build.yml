@@ -22,9 +22,16 @@ jobs:
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
 
-      - name: Build C# Projects
-        run: |
-          msbuild KsDumper11.sln /p:Configuration=Release /p:Platform="Mixed Platforms" /t:DarkControls;DriverInterface;KsDumper11
+      - name: Build DarkControls
+        run: msbuild DarkControls\DarkControls.csproj /p:Configuration=Release /p:Platform="AnyCPU"
+        shell: cmd
+
+      - name: Build DriverInterface
+        run: msbuild DriverInterface\DriverInterface.csproj /p:Configuration=Release /p:Platform="AnyCPU"
+        shell: cmd
+
+      - name: Build KsDumper11
+        run: msbuild KsDumper11\KsDumper11.csproj /p:Configuration=Release /p:Platform="x86" /p:OutputPath=bin\x86\Release
         shell: cmd
 
       - name: Build Driver x64
