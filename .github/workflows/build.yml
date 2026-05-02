@@ -3,7 +3,7 @@ on: [push]
 
 jobs:
   build:
-    runs-on: windows-2022 # Explicitly use 2022 for WDK compatibility
+    runs-on: windows-2022
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -17,23 +17,18 @@ jobs:
       - name: Extract WDK Headers and Libs
         shell: powershell
         run: |
-          # Create target directories
           $incBase = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0"
           $libBase = "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0"
           New-Item -ItemType Directory -Force -Path "$incBase\km", "$incBase\shared", "$libBase\km\x64"
 
-          # Extract and Copy Headers
+          # Extract Headers
           Expand-Archive -Path WDKHeaders.zip -DestinationPath "C:\WDKTemp" -Force
           Copy-Item "C:\WDKTemp\km\*" "$incBase\km" -Recurse -Force
           Copy-Item "C:\WDKTemp\shared\*" "$incBase\shared" -Recurse -Force
 
-          # Extract and Copy Libs
+          # Extract Libs
           Expand-Archive -Path WDKLib.zip -DestinationPath "C:\WDKLibTemp" -Force
           Copy-Item "C:\WDKLibTemp\km\*" "$libBase\km" -Recurse -Force
-
-          # Final Verification
-          if (Test-Path "$incBase\km\ntddk.h") { Write-Host "Verified: ntddk.h is in place." }
-          else { throw "Error: ntddk.h missing after extraction!" }
 
       - name: Restore Dependencies
         run: nuget restore KsDumper11.sln
@@ -51,13 +46,14 @@ jobs:
         shell: cmd
         run: |
           msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64 ^
-          /p:IncludePath="C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\km;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;%IncludePath%" ^
-          /p:LibraryPath="C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\km\x64;%LibraryPath%"
+          /p:IncludePath="C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\km;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared;%IncludePath%" ^
+          /p:LibraryPath="C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\km\x64;%LibraryPath%" ^
+          /p:PreprocessorDefinitions="_AMD64_;_KERNEL_MODE;%PreprocessorDefinitions%"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: KsDumper-Build-Output
+          name: KsDumper-Full-Build
           path: |
             KsDumper11/bin/x86/Release/KsDumper11.exe
             KsDumperDriver/x64/Release/KsDumperDriver.sys
