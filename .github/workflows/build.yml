@@ -20,8 +20,15 @@ jobs:
           New-Item -ItemType Directory -Force -Path "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0"
           Expand-Archive -Path WDKHeaders.zip -DestinationPath "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0" -Force
           Expand-Archive -Path WDKLib.zip -DestinationPath "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0" -Force
-          Write-Host "Headers extracted:"
-          dir "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0"
+
+      - name: Register SDK in Registry
+        shell: powershell
+        run: |
+          $regPath = "HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots"
+          New-Item -Path $regPath -Force | Out-Null
+          Set-ItemProperty -Path $regPath -Name "KitsRoot10" -Value "C:\Program Files (x86)\Windows Kits\10\" -Force
+          Set-ItemProperty -Path $regPath -Name "10.0.22621.0" -Value "C:\Program Files (x86)\Windows Kits\10\" -Force
+          Write-Host "Registry set"
 
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
