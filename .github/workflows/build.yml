@@ -13,12 +13,9 @@ jobs:
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v1
 
-      - name: Install WDK
+      - name: Find ntddk.h
         run: |
-          curl -L -o wdksetup.exe "https://go.microsoft.com/fwlink/?linkid=2249371"
-          start /wait wdksetup.exe /quiet /norestart
-          echo === Searching for ntddk.h ===
-          dir "C:\Program Files (x86)\Windows Kits\" /b /s 2>nul | findstr /i ntddk.h
+          where /r "C:\Program Files (x86)\Windows Kits" ntddk.h 2>nul || echo NOT FOUND
         shell: cmd
 
       - name: Restore All Dependencies
@@ -38,15 +35,15 @@ jobs:
 
       - name: Build Driver x64
         run: |
-          set "KM_INC=C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\km"
-          set "SHARED_INC=C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared"
-          set "LIB_PATH=C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\km\x64"
+          for /f "delims=" %%f in ('where /r "C:\Program Files (x86)\Windows Kits" ntddk.h') do set "NTDDK=%%~dpf" & goto :found
+          :found
+          echo Found ntddk.h at %NTDDK%
           msbuild KsDumperDriver\KsDumperDriver.vcxproj ^
             /p:Configuration=Release ^
             /p:Platform=x64 ^
-            /p:WindowsTargetPlatformVersion=10.0.26100.0 ^
-            /p:IncludePath="%KM_INC%;%SHARED_INC%" ^
-            /p:LibraryPath="%LIB_PATH%"
+            /p:WindowsTargetPlatformVersion=10.0 ^
+            /p:IncludePath="%NTDDK%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared" ^
+            /p:LibraryPath="C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\km\x64"
         shell: cmd
 
       - name: Upload Everything
