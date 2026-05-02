@@ -20,6 +20,23 @@ jobs:
           $proc = Start-Process -FilePath "wdksetup.exe" -ArgumentList "/quiet /norestart /ceip off" -Wait -PassThru
           Write-Host "WDK installer exit code: $($proc.ExitCode)"
 
+      - name: Patch NTUndocumented.h
+        shell: powershell
+        run: |
+          $sdkVer = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Lib" |
+            Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
+            Sort-Object Name -Descending |
+            Select-Object -First 1 -ExpandProperty Name
+          $ntddk = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\km\ntddk.h"
+          Write-Host "ntddk.h path: $ntddk"
+          Write-Host "Exists: $(Test-Path $ntddk)"
+          $file = "KsDumperDriver\NTUndocumented.h"
+          $content = Get-Content $file -Raw
+          Write-Host "Original line 2: $((Get-Content $file)[1])"
+          $content = $content -replace '#include\s*[<"]ntddk\.h[>"]', "#include `"$ntddk`""
+          Set-Content $file $content
+          Write-Host "Patched NTUndocumented.h"
+
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
 
@@ -35,25 +52,6 @@ jobs:
         run: msbuild KsDumper11\KsDumper11.csproj /p:Configuration=Release /p:Platform="x86" /p:OutputPath=bin\x86\Release
         shell: cmd
 
-      - name: Patch vcxproj include path
-        shell: powershell
-        run: |
-          $sdkVer = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Lib" |
-            Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
-            Sort-Object Name -Descending |
-            Select-Object -First 1 -ExpandProperty Name
-          Write-Host "Patching for SDK: $sdkVer"
-          $kmInc = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\km"
-          $sharedInc = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\shared"
-          $vcxproj = "KsDumperDriver\KsDumperDriver.vcxproj"
-          $content = Get-Content $vcxproj -Raw
-          $content = $content -replace '<AdditionalIncludeDirectories>([^<]*)</AdditionalIncludeDirectories>', "<AdditionalIncludeDirectories>$kmInc;$sharedInc;`$1</AdditionalIncludeDirectories>"
-          if ($content -notmatch 'AdditionalIncludeDirectories') {
-            $content = $content -replace '<ClCompile>', "<ClCompile>`n      <AdditionalIncludeDirectories>$kmInc;$sharedInc</AdditionalIncludeDirectories>"
-          }
-          Set-Content $vcxproj $content
-          Write-Host "Patched vcxproj successfully"
-
       - name: Build Driver x64
         shell: powershell
         run: |
@@ -61,6 +59,7 @@ jobs:
             Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
             Sort-Object Name -Descending |
             Select-Object -First 1 -ExpandProperty Name
+          Write-Host "Using SDK: $sdkVer"
           & msbuild KsDumperDriver\KsDumperDriver.vcxproj `
             /p:Configuration=Release `
             /p:Platform=x64 `
