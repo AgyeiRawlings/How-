@@ -28,19 +28,16 @@ jobs:
 
           # Extract Libs
           Expand-Archive -Path WDKLib.zip -DestinationPath "C:\WDKLibTemp" -Force
-          Copy-Item "C:\WDKLibTemp\km\*" "$libBase\km" -Recurse -Force
+          Copy-Item "C:\WDKLibTemp\km\*" "$libBase\km\x64" -Recurse -Force
 
       - name: Restore Dependencies
         run: nuget restore KsDumper11.sln
 
-      - name: Build DarkControls
-        run: msbuild DarkControls\DarkControls.csproj /p:Configuration=Release /p:Platform="AnyCPU"
-
-      - name: Build DriverInterface
-        run: msbuild DriverInterface\DriverInterface.csproj /p:Configuration=Release /p:Platform="AnyCPU"
-
-      - name: Build KsDumper11 (C# EXE)
-        run: msbuild KsDumper11\KsDumper11.csproj /p:Configuration=Release /p:Platform="x86" /p:OutputPath=bin\x86\Release
+      - name: Build Components
+        run: |
+          msbuild DarkControls\DarkControls.csproj /p:Configuration=Release /p:Platform="AnyCPU"
+          msbuild DriverInterface\DriverInterface.csproj /p:Configuration=Release /p:Platform="AnyCPU"
+          msbuild KsDumper11\KsDumper11.csproj /p:Configuration=Release /p:Platform="x86" /p:OutputPath=bin\x86\Release
 
       - name: Build KsDumperDriver (Kernel Driver)
         shell: cmd
@@ -48,7 +45,7 @@ jobs:
           msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64 ^
           /p:IncludePath="C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\km;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared;%IncludePath%" ^
           /p:LibraryPath="C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\km\x64;%LibraryPath%" ^
-          /p:PreprocessorDefinitions="_AMD64_;_KERNEL_MODE;%PreprocessorDefinitions%"
+          /p:DefineConstants="_AMD64_;_KERNEL_MODE;CONDITION_HANDLING=1"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
