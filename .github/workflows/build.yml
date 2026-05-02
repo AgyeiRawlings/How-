@@ -35,6 +35,25 @@ jobs:
         run: msbuild KsDumper11\KsDumper11.csproj /p:Configuration=Release /p:Platform="x86" /p:OutputPath=bin\x86\Release
         shell: cmd
 
+      - name: Patch vcxproj include path
+        shell: powershell
+        run: |
+          $sdkVer = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Lib" |
+            Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
+            Sort-Object Name -Descending |
+            Select-Object -First 1 -ExpandProperty Name
+          Write-Host "Patching for SDK: $sdkVer"
+          $kmInc = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\km"
+          $sharedInc = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\shared"
+          $vcxproj = "KsDumperDriver\KsDumperDriver.vcxproj"
+          $content = Get-Content $vcxproj -Raw
+          $content = $content -replace '<AdditionalIncludeDirectories>([^<]*)</AdditionalIncludeDirectories>', "<AdditionalIncludeDirectories>$kmInc;$sharedInc;`$1</AdditionalIncludeDirectories>"
+          if ($content -notmatch 'AdditionalIncludeDirectories') {
+            $content = $content -replace '<ClCompile>', "<ClCompile>`n      <AdditionalIncludeDirectories>$kmInc;$sharedInc</AdditionalIncludeDirectories>"
+          }
+          Set-Content $vcxproj $content
+          Write-Host "Patched vcxproj successfully"
+
       - name: Build Driver x64
         shell: powershell
         run: |
@@ -42,17 +61,10 @@ jobs:
             Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
             Sort-Object Name -Descending |
             Select-Object -First 1 -ExpandProperty Name
-          Write-Host "Using SDK: $sdkVer"
-          $kmInc     = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\km"
-          $sharedInc = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\shared"
-          $libPath   = "C:\Program Files (x86)\Windows Kits\10\Lib\$sdkVer\km\x64"
-          $addInc    = "$kmInc;$sharedInc"
           & msbuild KsDumperDriver\KsDumperDriver.vcxproj `
             /p:Configuration=Release `
             /p:Platform=x64 `
-            /p:WindowsTargetPlatformVersion=$sdkVer `
-            "/p:AdditionalIncludeDirectories=$addInc" `
-            "/p:LibraryPath=$libPath"
+            /p:WindowsTargetPlatformVersion=$sdkVer
 
       - name: Upload Everything
         uses: actions/upload-artifact@v4
