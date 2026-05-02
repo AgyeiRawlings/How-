@@ -13,10 +13,14 @@ jobs:
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v1
 
-      - name: Find ntddk.h
+      - name: Install WDK
+        shell: powershell
         run: |
-          where /r "C:\Program Files (x86)\Windows Kits" ntddk.h 2>nul || echo NOT FOUND
-        shell: cmd
+          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2249371" -OutFile "wdksetup.exe"
+          $proc = Start-Process -FilePath "wdksetup.exe" -ArgumentList "/quiet /norestart /ceip off" -Wait -PassThru
+          Write-Host "WDK installer exit code: $($proc.ExitCode)"
+          $found = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits" -Filter "ntddk.h" -Recurse -ErrorAction SilentlyContinue
+          if ($found) { $found.FullName } else { Write-Host "ntddk.h still not found!" }
 
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
@@ -34,17 +38,14 @@ jobs:
         shell: cmd
 
       - name: Build Driver x64
+        shell: powershell
         run: |
-          for /f "delims=" %%f in ('where /r "C:\Program Files (x86)\Windows Kits" ntddk.h') do set "NTDDK=%%~dpf" & goto :found
-          :found
-          echo Found ntddk.h at %NTDDK%
-          msbuild KsDumperDriver\KsDumperDriver.vcxproj ^
-            /p:Configuration=Release ^
-            /p:Platform=x64 ^
-            /p:WindowsTargetPlatformVersion=10.0 ^
-            /p:IncludePath="%NTDDK%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared" ^
-            /p:LibraryPath="C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\km\x64"
-        shell: cmd
+          $ntddk = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits" -Filter "ntddk.h" -Recurse | Select-Object -First 1
+          $kmInc = $ntddk.DirectoryName
+          $shared = $kmInc -replace "\\km$", "\shared"
+          $lib = $kmInc -replace "\\Include\\", "\Lib\" -replace "\\km$", "\km\x64"
+          Write-Host "KM Include: $kmInc"
+          & msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0 "/p:IncludePath=$kmInc;$shared" "/p:LibraryPath=$lib"
 
       - name: Upload Everything
         uses: actions/upload-artifact@v4
