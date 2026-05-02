@@ -20,6 +20,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0"
           Expand-Archive -Path WDKHeaders.zip -DestinationPath "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0" -Force
           Expand-Archive -Path WDKLib.zip -DestinationPath "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0" -Force
+          Write-Host "Headers extracted:"
+          dir "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0"
 
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
