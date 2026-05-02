@@ -1,8 +1,9 @@
 name: Build KsDumper EXE
 on: [push]
+
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-2022 # Explicitly use 2022 for WDK compatibility
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -13,29 +14,50 @@ jobs:
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v1
 
-      - name: Restore All Dependencies
+      - name: Extract WDK Headers and Libs
+        shell: powershell
+        run: |
+          # Create target directories
+          $incBase = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0"
+          $libBase = "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0"
+          New-Item -ItemType Directory -Force -Path "$incBase\km", "$incBase\shared", "$libBase\km\x64"
+
+          # Extract and Copy Headers
+          Expand-Archive -Path WDKHeaders.zip -DestinationPath "C:\WDKTemp" -Force
+          Copy-Item "C:\WDKTemp\km\*" "$incBase\km" -Recurse -Force
+          Copy-Item "C:\WDKTemp\shared\*" "$incBase\shared" -Recurse -Force
+
+          # Extract and Copy Libs
+          Expand-Archive -Path WDKLib.zip -DestinationPath "C:\WDKLibTemp" -Force
+          Copy-Item "C:\WDKLibTemp\km\*" "$libBase\km" -Recurse -Force
+
+          # Final Verification
+          if (Test-Path "$incBase\km\ntddk.h") { Write-Host "Verified: ntddk.h is in place." }
+          else { throw "Error: ntddk.h missing after extraction!" }
+
+      - name: Restore Dependencies
         run: nuget restore KsDumper11.sln
 
       - name: Build DarkControls
         run: msbuild DarkControls\DarkControls.csproj /p:Configuration=Release /p:Platform="AnyCPU"
-        shell: cmd
 
       - name: Build DriverInterface
         run: msbuild DriverInterface\DriverInterface.csproj /p:Configuration=Release /p:Platform="AnyCPU"
-        shell: cmd
 
-      - name: Build KsDumper11
+      - name: Build KsDumper11 (C# EXE)
         run: msbuild KsDumper11\KsDumper11.csproj /p:Configuration=Release /p:Platform="x86" /p:OutputPath=bin\x86\Release
-        shell: cmd
 
-      - name: Build Driver x64
-        run: msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64
+      - name: Build KsDumperDriver (Kernel Driver)
         shell: cmd
+        run: |
+          msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64 ^
+          /p:IncludePath="C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\km;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;%IncludePath%" ^
+          /p:LibraryPath="C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\km\x64;%LibraryPath%"
 
-      - name: Upload Everything
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: KsDumper-Full-Build
+          name: KsDumper-Build-Output
           path: |
-            KsDumper11/bin/x86/Release/
-            KsDumperDriver/x64/Release/
+            KsDumper11/bin/x86/Release/KsDumper11.exe
+            KsDumperDriver/x64/Release/KsDumperDriver.sys
