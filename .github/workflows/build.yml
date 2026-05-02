@@ -13,6 +13,14 @@ jobs:
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v1
 
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install WDK via winget
+        run: |
+          winget install Microsoft.WindowsDriverKit --silent --accept-package-agreements --accept-source-agreements
+        shell: powershell
+
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
 
@@ -28,8 +36,14 @@ jobs:
         run: msbuild KsDumper11\KsDumper11.csproj /p:Configuration=Release /p:Platform="x86" /p:OutputPath=bin\x86\Release
         shell: cmd
 
+      - name: Build Driver x64
+        run: msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64
+        shell: cmd
+
       - name: Upload Everything
         uses: actions/upload-artifact@v4
         with:
           name: KsDumper-Full-Build
-          path: KsDumper11/bin/x86/Release/
+          path: |
+            KsDumper11/bin/x86/Release/
+            KsDumperDriver/x64/Release/
