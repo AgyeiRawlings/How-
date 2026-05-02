@@ -46,12 +46,13 @@ jobs:
           $kmInc     = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\km"
           $sharedInc = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\shared"
           $libPath   = "C:\Program Files (x86)\Windows Kits\10\Lib\$sdkVer\km\x64"
+          $addInc    = "$kmInc;$sharedInc"
           & msbuild KsDumperDriver\KsDumperDriver.vcxproj `
             /p:Configuration=Release `
             /p:Platform=x64 `
             /p:WindowsTargetPlatformVersion=$sdkVer `
-            /p:IncludePath=`"$kmInc`;$sharedInc`" `
-            /p:LibraryPath=`"$libPath`"
+            "/p:AdditionalIncludeDirectories=$addInc" `
+            "/p:LibraryPath=$libPath"
 
       - name: Upload Everything
         uses: actions/upload-artifact@v4
