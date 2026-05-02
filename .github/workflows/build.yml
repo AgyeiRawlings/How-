@@ -36,15 +36,23 @@ jobs:
         shell: cmd
 
       - name: Build Driver x64
-        shell: cmd
+        shell: powershell
         run: |
-          for /f "delims=" %%v in ('dir "C:\Program Files (x86)\Windows Kits\10\Lib\" /b /ad /o-n') do set "SDKVER=%%v" & goto :found
-          :found
-          echo Using SDK version: %SDKVER%
-          set "KM_INC=C:\Program Files (x86)\Windows Kits\10\Include\%SDKVER%\km"
-          set "SHARED_INC=C:\Program Files (x86)\Windows Kits\10\Include\%SDKVER%\shared"
-          set "LIB_PATH=C:\Program Files (x86)\Windows Kits\10\Lib\%SDKVER%\km\x64"
-          msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64 /p:WindowsTargetPlatformVersion=%SDKVER% /p:IncludePath="%KM_INC%;%SHARED_INC%" /p:LibraryPath="%LIB_PATH%"
+          $sdkVer = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Lib" |
+            Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
+            Sort-Object Name -Descending |
+            Select-Object -First 1 -ExpandProperty Name
+          Write-Host "Using SDK: $sdkVer"
+          $kmInc  = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\km"
+          $sharedInc = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\shared"
+          $libPath = "C:\Program Files (x86)\Windows Kits\10\Lib\$sdkVer\km\x64"
+          $incPath = "$kmInc;$sharedInc"
+          & msbuild KsDumperDriver\KsDumperDriver.vcxproj `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            "/p:WindowsTargetPlatformVersion=$sdkVer" `
+            "/p:IncludePath=$incPath" `
+            "/p:LibraryPath=$libPath"
 
       - name: Upload Everything
         uses: actions/upload-artifact@v4
