@@ -20,18 +20,24 @@ jobs:
           $proc = Start-Process -FilePath "wdksetup.exe" -ArgumentList "/quiet /norestart /ceip off" -Wait -PassThru
           Write-Host "Exit code: $($proc.ExitCode)"
 
-      - name: Patch ntddk include
+      - name: Patch ntddk include and SDK version
         shell: powershell
         run: |
           $ntddk = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Include" -Recurse -Filter "ntddk.h" -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $ntddk) { Write-Error "ntddk.h not found!"; exit 1 }
           $fullPath = $ntddk.FullName -replace '\\', '/'
+          $sdkVer = ($ntddk.FullName -split "Include\\")[1].Split("\")[0]
           Write-Host "Found ntddk.h at: $fullPath"
+          Write-Host "SDK version: $sdkVer"
           $file = "KsDumperDriver\NTUndocumented.h"
           $content = Get-Content $file -Raw
           $content = $content -replace '#include <ntddk\.h>', "#include `"$fullPath`""
           Set-Content $file $content -NoNewline
-          Write-Host "Patched successfully"
+          $vcx = "KsDumperDriver\KsDumperDriver.vcxproj"
+          $vcxContent = Get-Content $vcx -Raw
+          $vcxContent = $vcxContent -replace '<WindowsTargetPlatformVersion>[^<]+</WindowsTargetPlatformVersion>', "<WindowsTargetPlatformVersion>$sdkVer</WindowsTargetPlatformVersion>"
+          Set-Content $vcx $vcxContent -NoNewline
+          Write-Host "Patched vcxproj SDK to $sdkVer"
 
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
