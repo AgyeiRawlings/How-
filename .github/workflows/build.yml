@@ -13,21 +13,13 @@ jobs:
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v1
 
-      - name: Install WDK
-        shell: powershell
+      - name: Extract WDK Headers
+        shell: cmd
         run: |
-          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2249371" -OutFile "wdksetup.exe"
-          $proc = Start-Process -FilePath "wdksetup.exe" -ArgumentList "/quiet /norestart /ceip off" -Wait -PassThru
-          Write-Host "Exit code: $($proc.ExitCode)"
-
-      - name: Patch ntddk include
-        shell: powershell
-        run: |
-          $ntddk = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Include" -Recurse -Filter "ntddk.h" | Select-Object -First 1
-          $fullPath = $ntddk.FullName -replace '\\', '/'
-          Write-Host "ntddk.h: $fullPath"
-          $file = "KsDumperDriver\NTUndocumented.h"
-          (Get-Content $file -Raw) -replace '#include <ntddk\.h>', "#include `"$fullPath`"" | Set-Content $file -NoNewline
+          mkdir "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0"
+          "C:\Program Files\WinRAR\WinRAR.exe" x WDKHeaders.rar.rar "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\" -y
+          mkdir "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0"
+          "C:\Program Files\WinRAR\WinRAR.exe" x WDKLib.rar "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\" -y
 
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
@@ -45,7 +37,7 @@ jobs:
         shell: cmd
 
       - name: Build Driver x64
-        run: msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64
+        run: msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0.22621.0
         shell: cmd
 
       - name: Upload Everything
