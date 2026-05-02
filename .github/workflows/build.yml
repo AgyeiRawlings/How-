@@ -14,21 +14,11 @@ jobs:
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v1
 
-      - name: Extract WDK Headers and Libs
+      - name: Install WDK Build Tools
         shell: powershell
         run: |
-          $incBase = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0"
-          $libBase = "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0"
-          New-Item -ItemType Directory -Force -Path "$incBase\km", "$incBase\shared", "$libBase\km\x64"
-
-          # Extract Headers
-          Expand-Archive -Path WDKHeaders.zip -DestinationPath "C:\WDKTemp" -Force
-          Copy-Item "C:\WDKTemp\km\*" "$incBase\km" -Recurse -Force
-          Copy-Item "C:\WDKTemp\shared\*" "$incBase\shared" -Recurse -Force
-
-          # Extract Libs
-          Expand-Archive -Path WDKLib.zip -DestinationPath "C:\WDKLibTemp" -Force
-          Copy-Item "C:\WDKLibTemp\km\*" "$libBase\km\x64" -Recurse -Force
+          # Install the WDK NuGet package to resolve kernel headers/macros automatically
+          nuget install Microsoft.DotNet.Wpf.GitHub-WDK-Headers -Version 0.0.0.1 -OutputDirectory .\packages
 
       - name: Restore Dependencies
         run: nuget restore KsDumper11.sln
@@ -43,9 +33,10 @@ jobs:
         shell: cmd
         run: |
           msbuild KsDumperDriver\KsDumperDriver.vcxproj /p:Configuration=Release /p:Platform=x64 ^
-          /p:IncludePath="C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\km;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared;%IncludePath%" ^
-          /p:LibraryPath="C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\km\x64;%LibraryPath%" ^
-          /p:PreprocessorDefinitions="_AMD64_;_KERNEL_MODE;CONDITION_HANDLING=1;WIN32;_WINDOWS;%PreprocessorDefinitions%"
+          /p:TargetPlatformVersion=10.0.22621.0 ^
+          /p:PlatformToolset=WindowsKernelModeDriver10.0 ^
+          /p:AdditionalIncludeDirectories="C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\km;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" ^
+          /p:PreprocessorDefinitions="_AMD64_;_KERNEL_MODE;%PreprocessorDefinitions%"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
