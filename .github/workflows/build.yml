@@ -16,10 +16,21 @@ jobs:
       - name: Extract WDK Headers
         shell: powershell
         run: |
+          # Extract to temp first to see structure
+          Expand-Archive -Path WDKHeaders.zip -DestinationPath "C:\WDKTemp" -Force
+          Write-Host "Extracted structure:"
+          Get-ChildItem "C:\WDKTemp" -Recurse -Depth 2 | Select-Object FullName
+          # Copy km and shared folders to correct location
           New-Item -ItemType Directory -Force -Path "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0"
+          Copy-Item "C:\WDKTemp\km" "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\km" -Recurse -Force
+          Copy-Item "C:\WDKTemp\shared" "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -Recurse -Force
+          # Extract lib
+          Expand-Archive -Path WDKLib.zip -DestinationPath "C:\WDKLibTemp" -Force
           New-Item -ItemType Directory -Force -Path "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0"
-          Expand-Archive -Path WDKHeaders.zip -DestinationPath "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0" -Force
-          Expand-Archive -Path WDKLib.zip -DestinationPath "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0" -Force
+          Copy-Item "C:\WDKLibTemp\km" "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\km" -Recurse -Force
+          # Verify
+          $ntddk = Test-Path "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\km\ntddk.h"
+          Write-Host "ntddk.h exists: $ntddk"
 
       - name: Register SDK in Registry
         shell: powershell
@@ -28,7 +39,6 @@ jobs:
           New-Item -Path $regPath -Force | Out-Null
           Set-ItemProperty -Path $regPath -Name "KitsRoot10" -Value "C:\Program Files (x86)\Windows Kits\10\" -Force
           Set-ItemProperty -Path $regPath -Name "10.0.22621.0" -Value "C:\Program Files (x86)\Windows Kits\10\" -Force
-          Write-Host "Registry set"
 
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
