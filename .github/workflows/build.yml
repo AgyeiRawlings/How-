@@ -16,10 +16,10 @@ jobs:
       - name: Extract WDK Headers
         shell: powershell
         run: |
-          New-Item -ItemType Directory -Force -Path "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\km"
-          New-Item -ItemType Directory -Force -Path "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\km"
-          & "C:\Program Files\WinRAR\WinRAR.exe" x WDKHeaders.rar.rar "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\" -y
-          & "C:\Program Files\WinRAR\WinRAR.exe" x WDKLib.rar "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\" -y
+          New-Item -ItemType Directory -Force -Path "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0"
+          New-Item -ItemType Directory -Force -Path "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0"
+          Expand-Archive -Path WDKHeaders.zip -DestinationPath "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0" -Force
+          Expand-Archive -Path WDKLib.zip -DestinationPath "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0" -Force
 
       - name: Restore All Dependencies
         run: nuget restore KsDumper11.sln
